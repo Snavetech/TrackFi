@@ -8,7 +8,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgotPassword }) => {
-  const { login } = useAuth();
+  const { login, loginDemo } = useAuth();
   const [email, setEmail] = useState('ismail@example.com');
   const [password, setPassword] = useState('password123');
   const [error, setError] = useState('');
@@ -36,6 +36,24 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight text-[#332a54]">TrackFi</h1>
           <p className="text-xs text-[#8b849c]">Predictive Financial Sustainability & Expense Tracker</p>
+        </div>
+
+        {/* Demo Callout Banner */}
+        <div className="p-4 rounded-2xl bg-purple-50/80 border border-purple-100 text-center space-y-2">
+          <p className="text-xs font-extrabold text-[#332a54]">Want to try the full web app right away?</p>
+          <button
+            type="button"
+            onClick={loginDemo}
+            className="w-full py-2.5 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-xl text-xs font-bold shadow-md shadow-purple-500/20 transition active:scale-95 flex items-center justify-center gap-2"
+          >
+            <Sparkles className="w-4 h-4 fill-white" />
+            <span>Explore Instant Live Demo</span>
+          </button>
+        </div>
+
+        <div className="relative flex items-center justify-center">
+          <div className="w-full border-t border-purple-100" />
+          <span className="absolute bg-white px-3 text-[10px] font-extrabold text-[#8b849c] uppercase tracking-wider">Or Sign In to Your Account</span>
         </div>
 
         {error && (
@@ -86,7 +104,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-2xl text-xs font-bold shadow-md shadow-purple-500/20 transition active:scale-95 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold shadow-md transition active:scale-95 flex items-center justify-center gap-2"
           >
             <span>{loading ? 'Signing In...' : 'Sign In'}</span>
             <ArrowRight className="w-4 h-4" />

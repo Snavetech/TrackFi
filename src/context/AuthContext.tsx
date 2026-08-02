@@ -10,6 +10,7 @@ interface AuthContextType {
   currencySymbol: string;
   currencyCode: string;
   login: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  loginDemo: () => void;
   signUp: (email: string, pass: string, fullName: string, currency?: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => void;
@@ -21,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Profile | null>(() => {
     const saved = localStorage.getItem('intellibudget_user');
-    return saved ? JSON.parse(saved) : INITIAL_PROFILE;
+    return saved ? JSON.parse(saved) : null;
   });
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -41,6 +42,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const currencySymbol = activeCurrencyConfig.symbol;
   const currencyCode = activeCurrencyConfig.code;
+
+  const loginDemo = () => {
+    setUser(INITIAL_PROFILE);
+  };
 
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
@@ -142,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currencySymbol,
         currencyCode,
         login,
+        loginDemo,
         signUp,
         logout,
         updateProfile,
