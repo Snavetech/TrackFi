@@ -96,34 +96,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email,
           password: pass,
           options: {
-            data: { full_name: fullName, preferred_currency: currency }
+            data: { full_name: fullName, preferred_currency: currency },
+            emailRedirectTo: 'https://trackfi-sigma.vercel.app/'
           }
         });
         if (error) throw error;
-        if (data.user) {
-          setUser({
-            id: data.user.id,
-            full_name: fullName,
-            preferred_currency: currency,
-            low_balance_threshold: 10000,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-        }
-      } else {
-        // Local Signup
-        setUser({
-          id: `usr_${Date.now()}`,
-          full_name: fullName,
-          preferred_currency: currency,
-          low_balance_threshold: 20000,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
       }
-      return { success: true };
+      // Do NOT auto-login. Require user to confirm email and log in via Login screen
+      return { success: true, requiresEmailConfirmation: true };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Registration failed' };
+      return { success: false, error: err.message || 'Sign up failed' };
     } finally {
       setIsLoading(false);
     }

@@ -15,6 +15,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
   const [currency, setCurrency] = useState('NGN');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +25,8 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
     const res = await signUp(email, password, fullName, currency);
     if (!res.success) {
       setError(res.error || 'Sign up failed');
+    } else {
+      setIsSuccess(true);
     }
     setLoading(false);
   };
@@ -162,118 +165,147 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
       <div className="lg:col-span-6 xl:col-span-5 p-6 sm:p-10 flex flex-col items-center justify-center bg-[#faf8fc]">
         <div className="w-full max-w-md p-8 sm:p-9 rounded-3xl bg-white border border-purple-100/80 shadow-2xl shadow-purple-900/10 space-y-6">
           
-          {/* Top Auth Tab Header */}
-          <div className="flex border-b border-slate-100 pb-1">
-            <button
-              type="button"
-              onClick={onNavigateLogin}
-              className="flex-1 pb-3 text-sm font-extrabold text-[#8b849c] hover:text-[#332a54] text-center transition"
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              className="flex-1 pb-3 text-sm font-extrabold text-[#6e44ff] border-b-2 border-[#6e44ff] text-center"
-            >
-              Sign Up
-            </button>
-          </div>
-
-          {/* Title Header */}
-          <div className="space-y-1">
-            <h2 className="text-2xl font-black text-[#332a54] flex items-center gap-2">
-              <span>Create Account</span>
-              <span className="text-xl">🚀</span>
-            </h2>
-            <p className="text-xs font-semibold text-[#8b849c]">Join TrackFi to manage expenses & predictive sustainability</p>
-          </div>
-
-          {error && (
-            <div className="p-3 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-xs text-center font-bold">
-              {error}
-            </div>
-          )}
-
-          {/* Form Fields */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Full Name</label>
-              <div className="relative">
-                <User className="w-4 h-4 absolute left-3.5 top-3.5 text-[#8b849c]" />
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter your full name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] transition"
-                />
+          {isSuccess ? (
+            <div className="text-center space-y-5 py-4">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-purple-100 text-[#6e44ff] flex items-center justify-center shadow-lg shadow-purple-500/20">
+                <Mail className="w-8 h-8 stroke-[2.5]" />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Email Address</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-[#8b849c]" />
-                <input
-                  type="email"
-                  required
-                  placeholder="Enter your email address"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] transition"
-                />
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-[#332a54]">Check your email! ✉️</h2>
+                <p className="text-xs font-semibold text-[#8b849c] max-w-xs mx-auto leading-relaxed">
+                  We've sent a verification link to <span className="font-extrabold text-[#332a54]">{email}</span>. Click the link in your email to confirm your account and start using TrackFi.
+                </p>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Preferred Currency</label>
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] font-mono transition"
+              <div className="p-4 rounded-2xl bg-purple-50 border border-purple-100 text-[11px] font-semibold text-[#6e44ff]">
+                After confirming your email address, you can return here to log in.
+              </div>
+
+              <button
+                type="button"
+                onClick={onNavigateLogin}
+                className="w-full py-3.5 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-2xl text-xs font-bold shadow-lg shadow-purple-500/25 transition active:scale-95 flex items-center justify-center gap-2"
               >
-                {SUPPORTED_CURRENCIES.map(c => (
-                  <option key={c.code} value={c.code}>{c.name} ({c.symbol} {c.code})</option>
-                ))}
-              </select>
+                <span>Proceed to Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
-
-            <div>
-              <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Password</label>
-              <div className="relative">
-                <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-[#8b849c]" />
-                <input
-                  type="password"
-                  required
-                  placeholder="Create a password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] transition"
-                />
+          ) : (
+            <>
+              {/* Top Auth Tab Header */}
+              <div className="flex border-b border-slate-100 pb-1">
+                <button
+                  type="button"
+                  onClick={onNavigateLogin}
+                  className="flex-1 pb-3 text-sm font-extrabold text-[#8b849c] hover:text-[#332a54] text-center transition"
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  className="flex-1 pb-3 text-sm font-extrabold text-[#6e44ff] border-b-2 border-[#6e44ff] text-center"
+                >
+                  Sign Up
+                </button>
               </div>
-            </div>
 
-            {/* Main Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-2xl text-xs font-bold shadow-lg shadow-purple-500/25 transition active:scale-95 flex items-center justify-center gap-2"
-            >
-              <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
-              <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
-                <ArrowRight className="w-3.5 h-3.5 text-white" />
+              {/* Title Header */}
+              <div className="space-y-1">
+                <h2 className="text-2xl font-black text-[#332a54] flex items-center gap-2">
+                  <span>Create Account</span>
+                  <span className="text-xl">🚀</span>
+                </h2>
+                <p className="text-xs font-semibold text-[#8b849c]">Join TrackFi to manage expenses & predictive sustainability</p>
               </div>
-            </button>
-          </form>
 
-          {/* Footer Navigation Link */}
-          <div className="text-center pt-2 text-xs text-[#8b849c]">
-            Already have an account?{' '}
-            <button onClick={onNavigateLogin} className="text-[#6e44ff] font-bold hover:underline">
-              Sign in
-            </button>
-          </div>
+              {error && (
+                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-xs text-center font-bold">
+                  {error}
+                </div>
+              )}
+
+              {/* Form Fields */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Full Name</label>
+                  <div className="relative">
+                    <User className="w-4 h-4 absolute left-3.5 top-3.5 text-[#8b849c]" />
+                    <input
+                      type="text"
+                      required
+                      placeholder="Enter your full name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Email Address</label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 absolute left-3.5 top-3.5 text-[#8b849c]" />
+                    <input
+                      type="email"
+                      required
+                      placeholder="Enter your email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Preferred Currency</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] font-mono transition"
+                  >
+                    {SUPPORTED_CURRENCIES.map(c => (
+                      <option key={c.code} value={c.code}>{c.name} ({c.symbol} {c.code})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Password</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-[#8b849c]" />
+                    <input
+                      type="password"
+                      required
+                      placeholder="Create a password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] transition"
+                    />
+                  </div>
+                </div>
+
+                {/* Main Submit Button */}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-3.5 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-2xl text-xs font-bold shadow-lg shadow-purple-500/25 transition active:scale-95 flex items-center justify-center gap-2"
+                >
+                  <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
+                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                    <ArrowRight className="w-3.5 h-3.5 text-white" />
+                  </div>
+                </button>
+              </form>
+
+              {/* Footer Navigation Link */}
+              <div className="text-center pt-2 text-xs text-[#8b849c]">
+                Already have an account?{' '}
+                <button onClick={onNavigateLogin} className="text-[#6e44ff] font-bold hover:underline">
+                  Sign in
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Bottom Trust Guarantee */}
