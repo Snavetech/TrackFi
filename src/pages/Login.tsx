@@ -8,8 +8,8 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgotPassword }) => {
-  const { login, loginDemo } = useAuth();
-  const [email, setEmail] = useState('ismail@example.com');
+  const { login } = useAuth();
+  const [email, setEmail] = useState('demo@trackfi.app');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -53,7 +53,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
               with <span className="text-[#6e44ff]">TrackFi</span>
             </h1>
             <p className="text-xs sm:text-sm font-semibold text-[#7a7293] leading-relaxed">
-              Track your income, manage expenses, set goals, and get AI-powered insights to achieve financial freedom.
+              Track your income, manage expenses, set goals, and get predictive insights to achieve financial freedom.
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
               </div>
               <div>
                 <h4 className="text-xs font-extrabold text-[#332a54]">Smart Insights</h4>
-                <p className="text-[11px] font-semibold text-[#8b849c]">AI-powered insights to help you save more</p>
+                <p className="text-[11px] font-semibold text-[#8b849c]">Predictive analytics engine to help you save more</p>
               </div>
             </div>
 
@@ -124,9 +124,9 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
               </div>
             </div>
 
-            {/* Floating Bottom-Right Badge: AI Score */}
+            {/* Floating Bottom-Right Badge: Sustainability Score */}
             <div className="absolute -bottom-6 -right-2 z-20 p-3.5 rounded-2xl bg-white shadow-xl border border-purple-100/80">
-              <span className="text-[9px] font-extrabold text-[#8b849c] uppercase tracking-wider block">AI Score</span>
+              <span className="text-[9px] font-extrabold text-[#8b849c] uppercase tracking-wider block">Sustainability Score</span>
               <div className="flex items-center gap-3 mt-1">
                 <div className="relative w-8 h-8 rounded-full border-4 border-[#6e44ff] border-t-transparent flex items-center justify-center">
                   <span className="text-[9px] font-extrabold text-[#332a54]">84</span>
@@ -267,57 +267,10 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
                 <ArrowRight className="w-3.5 h-3.5 text-white" />
               </div>
             </button>
-
-            {/* Secondary Instant Live Demo Button */}
-            <button
-              type="button"
-              onClick={loginDemo}
-              className="w-full py-2.5 bg-purple-50 hover:bg-purple-100 text-[#6e44ff] border border-purple-200 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4 fill-[#6e44ff]" />
-              <span>Explore Instant Live Demo</span>
-            </button>
           </form>
 
-          {/* Social Logins */}
-          <div className="space-y-3 pt-2">
-            <div className="relative flex items-center justify-center">
-              <div className="w-full border-t border-slate-100" />
-              <span className="absolute bg-white px-3 text-[10px] font-bold text-[#a09aa6] uppercase tracking-wider">or continue with</span>
-            </div>
-
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={loginDemo}
-                className="w-full py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl text-xs font-bold text-[#332a54] transition flex items-center justify-center gap-2 shadow-2xs"
-              >
-                {/* Official Google G Logo */}
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.29v3.15C3.26 21.3 7.31 24 12 24z"/>
-                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.29C.47 8.21 0 10.05 0 12s.47 3.79 1.29 5.42l3.99-3.15z"/>
-                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.58l3.99 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                </svg>
-                <span>Continue with Google</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={loginDemo}
-                className="w-full py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl text-xs font-bold text-[#332a54] transition flex items-center justify-center gap-2 shadow-2xs"
-              >
-                {/* Official Apple Logo */}
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.85c.66-.8 1.11-1.92.99-3.04-.96.04-2.13.64-2.81 1.44-.61.71-1.14 1.86-1 2.97 1.08.08 2.16-.57 2.82-1.37z"/>
-                </svg>
-                <span>Continue with Apple</span>
-              </button>
-            </div>
-          </div>
-
           {/* Footer Navigation Link */}
-          <div className="text-center pt-1 text-xs text-[#8b849c]">
+          <div className="text-center pt-2 text-xs text-[#8b849c]">
             Don't have an account?{' '}
             <button onClick={onNavigateSignUp} className="text-[#6e44ff] font-bold hover:underline">
               Sign up

@@ -75,15 +75,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // Filter out legacy demo items
-          return parsed.filter((t: any) => !t.id?.startsWith('tx_90_') && !t.id?.startsWith('tx_60_') && !t.id?.startsWith('tx_30_'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
       } catch {
-        return [];
+        return INITIAL_TRANSACTIONS;
       }
     }
-    return [];
+    return INITIAL_TRANSACTIONS;
   });
 
   const [budgets, setBudgets] = useState<Budget[]>(() => {
@@ -91,14 +90,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((b: any) => !b.id?.startsWith('bdg_'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
       } catch {
-        return [];
+        return INITIAL_BUDGETS;
       }
     }
-    return [];
+    return INITIAL_BUDGETS;
   });
 
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => {
@@ -106,14 +105,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((g: any) => !g.id?.startsWith('svg_'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
       } catch {
-        return [];
+        return INITIAL_SAVINGS_GOALS;
       }
     }
-    return [];
+    return INITIAL_SAVINGS_GOALS;
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
@@ -121,18 +120,43 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((n: any) => !n.id?.startsWith('ntf_01') && !n.id?.startsWith('ntf_02'));
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
       } catch {
-        return [];
+        return INITIAL_NOTIFICATIONS;
       }
     }
-    return [];
+    return INITIAL_NOTIFICATIONS;
   });
 
   const [activeHorizon, setActiveHorizon] = useState<number>(30);
   const [predictionHistory, setPredictionHistory] = useState<FinancialPrediction[]>([]);
+
+  // Supabase Cross-Device Live Data Sync Effect
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !user?.id) return;
+
+    async function loadCloudUserData() {
+      try {
+        const [catRes, txRes, bdgRes, svgRes] = await Promise.all([
+          supabase!.from('categories').select('*').eq('user_id', user!.id),
+          supabase!.from('transactions').select('*').eq('user_id', user!.id).order('date', { ascending: false }),
+          supabase!.from('budgets').select('*').eq('user_id', user!.id),
+          supabase!.from('savings_goals').select('*').eq('user_id', user!.id),
+        ]);
+
+        if (catRes.data && catRes.data.length > 0) setCategories(catRes.data);
+        if (txRes.data && txRes.data.length > 0) setTransactions(txRes.data);
+        if (bdgRes.data && bdgRes.data.length > 0) setBudgets(bdgRes.data);
+        if (svgRes.data && svgRes.data.length > 0) setSavingsGoals(svgRes.data);
+      } catch (err) {
+        console.error('Error fetching Supabase cloud data:', err);
+      }
+    }
+
+    loadCloudUserData();
+  }, [user?.id]);
 
   // Sync to LocalStorage
   useEffect(() => {

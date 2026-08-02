@@ -8,7 +8,7 @@ interface SignUpProps {
 }
 
 export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
-  const { signUp, loginDemo } = useAuth();
+  const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,7 +53,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
               with <span className="text-[#6e44ff]">TrackFi</span>
             </h1>
             <p className="text-xs sm:text-sm font-semibold text-[#7a7293] leading-relaxed">
-              Track your income, manage expenses, set goals, and get AI-powered insights to achieve financial freedom.
+              Track your income, manage expenses, set goals, and get predictive insights to achieve financial freedom.
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
               </div>
               <div>
                 <h4 className="text-xs font-extrabold text-[#332a54]">Smart Insights</h4>
-                <p className="text-[11px] font-semibold text-[#8b849c]">AI-powered insights to help you save more</p>
+                <p className="text-[11px] font-semibold text-[#8b849c]">Predictive analytics engine to help you save more</p>
               </div>
             </div>
 
@@ -124,9 +124,9 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
               </div>
             </div>
 
-            {/* Floating Bottom-Right Badge: AI Score */}
+            {/* Floating Bottom-Right Badge: Sustainability Score */}
             <div className="absolute -bottom-6 -right-2 z-20 p-3.5 rounded-2xl bg-white shadow-xl border border-purple-100/80">
-              <span className="text-[9px] font-extrabold text-[#8b849c] uppercase tracking-wider block">AI Score</span>
+              <span className="text-[9px] font-extrabold text-[#8b849c] uppercase tracking-wider block">Sustainability Score</span>
               <div className="flex items-center gap-3 mt-1">
                 <div className="relative w-8 h-8 rounded-full border-4 border-[#6e44ff] border-t-transparent flex items-center justify-center">
                   <span className="text-[9px] font-extrabold text-[#332a54]">84</span>
@@ -265,20 +265,10 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
                 <ArrowRight className="w-3.5 h-3.5 text-white" />
               </div>
             </button>
-
-            {/* Secondary Instant Live Demo Button */}
-            <button
-              type="button"
-              onClick={loginDemo}
-              className="w-full py-2.5 bg-purple-50 hover:bg-purple-100 text-[#6e44ff] border border-purple-200 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4 fill-[#6e44ff]" />
-              <span>Explore Instant Live Demo</span>
-            </button>
           </form>
 
           {/* Footer Navigation Link */}
-          <div className="text-center pt-1 text-xs text-[#8b849c]">
+          <div className="text-center pt-2 text-xs text-[#8b849c]">
             Already have an account?{' '}
             <button onClick={onNavigateLogin} className="text-[#6e44ff] font-bold hover:underline">
               Sign in
