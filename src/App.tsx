@@ -68,11 +68,65 @@ const AppContent: React.FC = () => {
   );
 };
 
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('TrackFi Application Error Boundary Caught:', error, errorInfo);
+  }
+
+  handleReset = () => {
+    localStorage.removeItem('intellibudget_user');
+    window.location.reload();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-6 bg-[#f4f0f8] text-[#332a54] font-sans">
+          <div className="w-full max-w-md p-8 rounded-3xl bg-white border border-purple-100 shadow-2xl text-center space-y-5">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-2xl">
+              ⚠️
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-xl font-black text-[#332a54]">Something went wrong</h2>
+              <p className="text-xs text-[#8b849c] font-semibold">
+                An unexpected error occurred while loading your workspace. Click below to reload your session cleanly.
+              </p>
+            </div>
+            <button
+              onClick={this.handleReset}
+              className="w-full py-3 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-2xl text-xs font-bold shadow-md shadow-purple-500/20 transition active:scale-95"
+            >
+              Reload Workspace Session
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
