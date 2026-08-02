@@ -322,31 +322,45 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </button>
           </div>
 
-          <div className="divide-y divide-purple-50">
-            {[...transactions]
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-              .slice(0, 4)
-              .map((t, idx) => {
-                const isIncome = t.type === 'income';
-              return (
-                <div key={t.id || idx} className="py-3 flex items-center justify-between text-xs hover:bg-slate-50/50 rounded-xl px-1 transition">
-                  <div className="flex items-center gap-3">
-                    <span className={`w-2.5 h-2.5 rounded-full ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                    <div>
-                      <p className="font-bold text-[#332a54]">{t.description || 'Expense Transaction'}</p>
-                      <p className="text-[10px] text-[#8b849c] mt-0.5">{t.date} • {t.category_id ? categoryMap.get(t.category_id)?.name : 'General'}</p>
+          {transactions.length === 0 ? (
+            <div className="py-8 text-center space-y-3 bg-purple-50/50 rounded-2xl border border-dashed border-purple-200 p-4">
+              <p className="text-xs font-extrabold text-[#332a54]">No transactions recorded yet</p>
+              <p className="text-[11px] text-[#8b849c]">Your financial ledger is fresh and ready! Add your first income or expense transaction.</p>
+              <button
+                onClick={() => setIsTxModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-xl text-xs font-bold shadow-md shadow-purple-500/20 transition active:scale-95"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add First Transaction</span>
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-purple-50">
+              {[...transactions]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 4)
+                .map((t, idx) => {
+                  const isIncome = t.type === 'income';
+                return (
+                  <div key={t.id || idx} className="py-3 flex items-center justify-between text-xs hover:bg-slate-50/50 rounded-xl px-1 transition">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-2.5 h-2.5 rounded-full ${isIncome ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      <div>
+                        <p className="font-bold text-[#332a54]">{t.description || 'Expense Transaction'}</p>
+                        <p className="text-[10px] text-[#8b849c] mt-0.5">{t.date} • {t.category_id ? categoryMap.get(t.category_id)?.name : 'General'}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-bold font-mono">
+                      <span className={isIncome ? 'text-emerald-600' : 'text-[#6e44ff]'}>
+                        {isIncome ? '+' : '-'} {currencySymbol}{t.amount.toFixed(2)}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-[#8b849c]" />
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 font-bold font-mono">
-                    <span className={isIncome ? 'text-emerald-600' : 'text-[#6e44ff]'}>
-                      {isIncome ? '+' : '-'} {currencySymbol}{t.amount.toFixed(2)}
-                    </span>
-                    <ChevronRight className="w-3.5 h-3.5 text-[#8b849c]" />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Monthly Expenses Category Tiles (7 cols) */}
