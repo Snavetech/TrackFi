@@ -193,11 +193,13 @@ export function computeFinancialPrediction({
     );
   }
 
+  const todayStr = format(today, 'yyyy-MM-dd');
+
   return {
-    id: `pred_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    id: `pred_${userId}_${todayStr}_${horizonDays}`,
     user_id: userId,
     budget_id: budgetId,
-    prediction_date: format(today, 'yyyy-MM-dd'),
+    prediction_date: todayStr,
     forecast_horizon_days: horizonDays,
     avg_daily_burn_rate: Number(avgDailyBurnRate.toFixed(2)),
     projected_balance: Number(projectedBalance.toFixed(2)),

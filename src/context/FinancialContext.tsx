@@ -209,7 +209,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return [prediction, ...filtered].slice(0, 15);
       });
     }
-  }, [prediction]);
+  }, [prediction?.id]);
 
   // Automated Notifications Logic (Low Balance, Budget Alerts, High Risk)
   useEffect(() => {
