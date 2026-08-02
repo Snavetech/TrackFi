@@ -61,7 +61,7 @@ interface FinancialContextType {
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
 
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, currencySymbol } = useAuth();
   const userId = user?.id || 'usr_demo_01';
   const isDemoUser = userId === 'usr_demo_01' || user?.full_name?.toLowerCase().includes('ismail') || user?.id?.includes('demo');
 
