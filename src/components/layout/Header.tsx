@@ -118,8 +118,17 @@ export const Header: React.FC<HeaderProps> = ({ pageTitle, onOpenMobileMenu, onO
                           <span className="font-semibold text-[#332a54]">{n.title}</span>
                           {!n.is_read && <span className="w-2 h-2 rounded-full bg-[#6e44ff] shrink-0 mt-1" />}
                         </div>
-                        <p className="mt-1 text-[#8b849c] leading-relaxed text-[11px]">{n.body}</p>
-                        <span className="mt-2 block text-[10px] text-[#a09aa6]">{format(new Date(n.created_at), 'hh:mm a, dd MMM')}</span>
+                        <p className="mt-1 text-[#8b849c] leading-relaxed text-[11px]">{n.body || (n as any).message || ''}</p>
+                        <span className="mt-2 block text-[10px] text-[#a09aa6]">
+                          {(() => {
+                            try {
+                              const d = new Date(n.created_at);
+                              return isNaN(d.getTime()) ? '' : format(d, 'hh:mm a, dd MMM');
+                            } catch {
+                              return '';
+                            }
+                          })()}
+                        </span>
                       </div>
                     ))
                   )}

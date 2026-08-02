@@ -46,13 +46,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     .reduce((sum, t) => sum + t.amount, 0);
   const budgetProgressPercent = totalBudgetLimit > 0 ? Math.min(100, Math.round((totalBudgetSpent / totalBudgetLimit) * 100)) : 0;
 
+  // Safe Date parsing helper
+  const safeParseDate = (dateStr?: string): Date => {
+    if (!dateStr) return new Date();
+    try {
+      const d = parseISO(dateStr);
+      return isNaN(d.getTime()) ? new Date() : d;
+    } catch {
+      return new Date();
+    }
+  };
+
   // Chart data setup for Expenses Statistics (Day / Week / Month grouping)
-  const sortedTxs = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const validTxs = (transactions || []).filter(t => t && t.date && typeof t.amount === 'number' && !isNaN(t.amount));
+  const sortedTxs = [...validTxs].sort((a, b) => safeParseDate(a.date).getTime() - safeParseDate(b.date).getTime());
 
   const displayChartData = React.useMemo(() => {
     if (chartTimeframe === 'month') {
       const monthsMap = new Map<string, number>();
-      const refDate = sortedTxs.length > 0 ? parseISO(sortedTxs[sortedTxs.length - 1].date) : new Date();
+      const refDate = sortedTxs.length > 0 ? safeParseDate(sortedTxs[sortedTxs.length - 1].date) : new Date();
       for (let i = 5; i >= 0; i--) {
         const mDate = subMonths(refDate, i);
         const mKey = format(mDate, 'MMM yyyy');
@@ -60,7 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       }
       sortedTxs.forEach(t => {
         if (t.type !== 'expense') return;
-        const mKey = format(parseISO(t.date), 'MMM yyyy');
+        const mKey = format(safeParseDate(t.date), 'MMM yyyy');
         if (monthsMap.has(mKey)) {
           monthsMap.set(mKey, (monthsMap.get(mKey) || 0) + t.amount);
         } else {
@@ -72,7 +84,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
     if (chartTimeframe === 'week') {
       const weeksMap = new Map<string, number>();
-      const refDate = sortedTxs.length > 0 ? parseISO(sortedTxs[sortedTxs.length - 1].date) : new Date();
+      const refDate = sortedTxs.length > 0 ? safeParseDate(sortedTxs[sortedTxs.length - 1].date) : new Date();
       for (let i = 5; i >= 0; i--) {
         const wDate = subWeeks(refDate, i);
         const weekNum = Math.ceil(wDate.getDate() / 7);
@@ -81,7 +93,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       }
       sortedTxs.forEach(t => {
         if (t.type !== 'expense') return;
-        const dObj = parseISO(t.date);
+        const dObj = safeParseDate(t.date);
         const weekNum = Math.ceil(dObj.getDate() / 7);
         const wKey = `${format(dObj, 'MMM')} W${weekNum}`;
         if (weeksMap.has(wKey)) {
@@ -97,7 +109,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const chartDataMap = new Map<string, { date: string; amount: number }>();
     sortedTxs.forEach(t => {
       if (t.type !== 'expense') return;
-      const key = format(parseISO(t.date), 'MMM d');
+      const key = format(safeParseDate(t.date), 'MMM d');
       const existing = chartDataMap.get(key) || { date: key, amount: 0 };
       existing.amount += t.amount;
       chartDataMap.set(key, existing);

@@ -105,6 +105,11 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, Error
               <p className="text-xs text-[#8b849c] font-semibold">
                 An unexpected error occurred while loading your workspace. Click below to reload your session cleanly.
               </p>
+              {this.state.error?.message && (
+                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-[11px] font-mono font-bold break-all text-left">
+                  {this.state.error.message}
+                </div>
+              )}
             </div>
             <button
               onClick={this.handleReset}
