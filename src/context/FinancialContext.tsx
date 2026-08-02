@@ -61,123 +61,122 @@ interface FinancialContextType {
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
 
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, currencySymbol } = useAuth();
+  const { user } = useAuth();
   const userId = user?.id || 'usr_demo_01';
+  const isDemoUser = userId === 'usr_demo_01' || user?.full_name?.toLowerCase().includes('ismail') || user?.id?.includes('demo');
 
-  // State with LocalStorage persistence
+  // State with per-user LocalStorage persistence & cloud sync
   const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem('intellibudget_categories');
+    const saved = localStorage.getItem(`intellibudget_categories_${userId}`);
     return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
   });
 
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('intellibudget_transactions');
+    const saved = localStorage.getItem(`intellibudget_transactions_${userId}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
+        if (Array.isArray(parsed)) return parsed;
       } catch {
-        return INITIAL_TRANSACTIONS;
+        return isDemoUser ? INITIAL_TRANSACTIONS : [];
       }
     }
-    return INITIAL_TRANSACTIONS;
+    return isDemoUser ? INITIAL_TRANSACTIONS : [];
   });
 
   const [budgets, setBudgets] = useState<Budget[]>(() => {
-    const saved = localStorage.getItem('intellibudget_budgets');
+    const saved = localStorage.getItem(`intellibudget_budgets_${userId}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
+        if (Array.isArray(parsed)) return parsed;
       } catch {
-        return INITIAL_BUDGETS;
+        return isDemoUser ? INITIAL_BUDGETS : [];
       }
     }
-    return INITIAL_BUDGETS;
+    return isDemoUser ? INITIAL_BUDGETS : [];
   });
 
   const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>(() => {
-    const saved = localStorage.getItem('intellibudget_savings_goals');
+    const saved = localStorage.getItem(`intellibudget_savings_goals_${userId}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
+        if (Array.isArray(parsed)) return parsed;
       } catch {
-        return INITIAL_SAVINGS_GOALS;
+        return isDemoUser ? INITIAL_SAVINGS_GOALS : [];
       }
     }
-    return INITIAL_SAVINGS_GOALS;
+    return isDemoUser ? INITIAL_SAVINGS_GOALS : [];
   });
 
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
-    const saved = localStorage.getItem('intellibudget_notifications');
+    const saved = localStorage.getItem(`intellibudget_notifications_${userId}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
+        if (Array.isArray(parsed)) return parsed;
       } catch {
-        return INITIAL_NOTIFICATIONS;
+        return isDemoUser ? INITIAL_NOTIFICATIONS : [];
       }
     }
-    return INITIAL_NOTIFICATIONS;
+    return isDemoUser ? INITIAL_NOTIFICATIONS : [];
   });
 
   const [activeHorizon, setActiveHorizon] = useState<number>(30);
   const [predictionHistory, setPredictionHistory] = useState<FinancialPrediction[]>([]);
 
-  // Supabase Cross-Device Live Data Sync Effect
+  // Reload user data when user changes
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase || !user?.id) return;
-
-    async function loadCloudUserData() {
-      try {
-        const [catRes, txRes, bdgRes, svgRes] = await Promise.all([
-          supabase!.from('categories').select('*').eq('user_id', user!.id),
-          supabase!.from('transactions').select('*').eq('user_id', user!.id).order('date', { ascending: false }),
-          supabase!.from('budgets').select('*').eq('user_id', user!.id),
-          supabase!.from('savings_goals').select('*').eq('user_id', user!.id),
-        ]);
-
-        if (catRes.data && catRes.data.length > 0) setCategories(catRes.data);
-        if (txRes.data && txRes.data.length > 0) setTransactions(txRes.data);
-        if (bdgRes.data && bdgRes.data.length > 0) setBudgets(bdgRes.data);
-        if (svgRes.data && svgRes.data.length > 0) setSavingsGoals(svgRes.data);
-      } catch (err) {
-        console.error('Error fetching Supabase cloud data:', err);
-      }
+    const savedTx = localStorage.getItem(`intellibudget_transactions_${userId}`);
+    if (savedTx) {
+      try { setTransactions(JSON.parse(savedTx)); } catch {}
+    } else {
+      setTransactions(isDemoUser ? INITIAL_TRANSACTIONS : []);
     }
 
-    loadCloudUserData();
-  }, [user?.id]);
+    const savedBdg = localStorage.getItem(`intellibudget_budgets_${userId}`);
+    if (savedBdg) {
+      try { setBudgets(JSON.parse(savedBdg)); } catch {}
+    } else {
+      setBudgets(isDemoUser ? INITIAL_BUDGETS : []);
+    }
 
-  // Sync to LocalStorage
+    const savedSvg = localStorage.getItem(`intellibudget_savings_goals_${userId}`);
+    if (savedSvg) {
+      try { setSavingsGoals(JSON.parse(savedSvg)); } catch {}
+    } else {
+      setSavingsGoals(isDemoUser ? INITIAL_SAVINGS_GOALS : []);
+    }
+
+    const savedNtf = localStorage.getItem(`intellibudget_notifications_${userId}`);
+    if (savedNtf) {
+      try { setNotifications(JSON.parse(savedNtf)); } catch {}
+    } else {
+      setNotifications(isDemoUser ? INITIAL_NOTIFICATIONS : []);
+    }
+  }, [userId]);
+
+  // Sync to LocalStorage per user ID
   useEffect(() => {
-    localStorage.setItem('intellibudget_categories', JSON.stringify(categories));
-  }, [categories]);
+    localStorage.setItem(`intellibudget_categories_${userId}`, JSON.stringify(categories));
+  }, [categories, userId]);
 
   useEffect(() => {
-    localStorage.setItem('intellibudget_transactions', JSON.stringify(transactions));
-  }, [transactions]);
+    localStorage.setItem(`intellibudget_transactions_${userId}`, JSON.stringify(transactions));
+  }, [transactions, userId]);
 
   useEffect(() => {
-    localStorage.setItem('intellibudget_budgets', JSON.stringify(budgets));
-  }, [budgets]);
+    localStorage.setItem(`intellibudget_budgets_${userId}`, JSON.stringify(budgets));
+  }, [budgets, userId]);
 
   useEffect(() => {
-    localStorage.setItem('intellibudget_savings_goals', JSON.stringify(savingsGoals));
-  }, [savingsGoals]);
+    localStorage.setItem(`intellibudget_savings_goals_${userId}`, JSON.stringify(savingsGoals));
+  }, [savingsGoals, userId]);
 
   useEffect(() => {
-    localStorage.setItem('intellibudget_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+    localStorage.setItem(`intellibudget_notifications_${userId}`, JSON.stringify(notifications));
+  }, [notifications, userId]);
 
   // Derived Key Financial Totals
   const totalIncome = useMemo(() => {
