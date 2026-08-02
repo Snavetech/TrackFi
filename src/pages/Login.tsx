@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Sparkles, ArrowRight, Lock, Mail } from 'lucide-react';
-
-interface LoginProps {
-  onNavigateSignUp: () => void;
-  onNavigateForgotPassword: () => void;
-}
-
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { Sparkles, ArrowRight, Lock, Mail, Check, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 interface LoginProps {
