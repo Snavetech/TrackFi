@@ -12,6 +12,7 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [currency, setCurrency] = useState('NGN');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,8 +20,14 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match. Please check and try again.');
+      return;
+    }
+
+    setLoading(true);
 
     const res = await signUp(email, password, fullName, currency);
     if (!res.success) {
@@ -279,6 +286,21 @@ export const SignUp: React.FC<SignUpProps> = ({ onNavigateLogin }) => {
                       placeholder="Create a password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-extrabold text-[#332a54] mb-1">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 absolute left-3.5 top-3.5 text-[#8b849c]" />
+                    <input
+                      type="password"
+                      required
+                      placeholder="Re-enter your password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-semibold focus:outline-none focus:border-[#6e44ff] transition"
                     />
                   </div>
