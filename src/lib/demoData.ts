@@ -234,18 +234,18 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: 'ntf_demo_01',
     user_id: 'usr_demo_01',
-    type: 'warning',
+    type: 'budget_warning',
     title: 'Predictive Burn Rate Alert',
-    message: 'At current daily spending, your cash runway is estimated at 11 days. Review non-essential spending caps.',
+    body: 'At current daily spending, your cash runway is estimated at 11 days. Review non-essential spending caps.',
     is_read: false,
     created_at: new Date().toISOString(),
   },
   {
     id: 'ntf_demo_02',
     user_id: 'usr_demo_01',
-    type: 'info',
+    type: 'system',
     title: 'Welcome to TrackFi',
-    message: 'Your financial sustainability tracking environment has been provisioned.',
+    body: 'Your financial sustainability tracking environment has been provisioned.',
     is_read: true,
     created_at: new Date().toISOString(),
   }

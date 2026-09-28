@@ -105,7 +105,13 @@ export function computeFinancialPrediction({
   // Active budget overspend penalty
   const activeOverspends = budgets.filter(b => {
     const budgetSpent = transactions
-      .filter(t => t.type === 'expense' && (!b.category_id || t.category_id === b.category_id))
+      .filter(t => {
+        if (t.type !== 'expense') return false;
+        if (b.category_id && t.category_id !== b.category_id) return false;
+        // Only count transactions within this budget's date range
+        if (t.date < b.start_date || t.date > b.end_date) return false;
+        return true;
+      })
       .reduce((sum, t) => sum + t.amount, 0);
     return budgetSpent > b.amount;
   }).length;

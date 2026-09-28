@@ -40,7 +40,13 @@ export const Budgets: React.FC = () => {
           budgets.map(b => {
             const cat = b.category_id ? categoryMap.get(b.category_id) : null;
             const spent = transactions
-              .filter(t => t.type === 'expense' && (!b.category_id || t.category_id === b.category_id))
+              .filter(t => {
+                if (t.type !== 'expense') return false;
+                if (b.category_id && t.category_id !== b.category_id) return false;
+                // Only count transactions within this budget's date range
+                if (t.date < b.start_date || t.date > b.end_date) return false;
+                return true;
+              })
               .reduce((sum, t) => sum + t.amount, 0);
 
             const percent = Math.min(100, Math.round((spent / b.amount) * 100));

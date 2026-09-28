@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useFinancial } from '../../context/FinancialContext';
 import { TransactionModal } from '../modals/TransactionModal';
-import { Bell, Plus, ShieldCheck, CheckCheck, HelpCircle } from 'lucide-react';
+import { Bell, Plus, ShieldCheck, CheckCheck, HelpCircle, Cloud, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface HeaderProps {
@@ -13,7 +13,16 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ pageTitle, onOpenMobileMenu, onOpenTutorial }) => {
   const { user, currencyCode, currencySymbol } = useAuth();
-  const { notifications, unreadNotificationCount, markNotificationAsRead, markAllNotificationsAsRead, prediction } = useFinancial();
+  const {
+    notifications,
+    unreadNotificationCount,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    prediction,
+    isSyncing,
+    isCloudConnected,
+    syncWithCloud
+  } = useFinancial();
 
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -44,6 +53,33 @@ export const Header: React.FC<HeaderProps> = ({ pageTitle, onOpenMobileMenu, onO
 
         {/* Right: Quick Actions */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          {/* Cloud Sync Status Indicator */}
+          {isCloudConnected ? (
+            <button
+              type="button"
+              onClick={() => syncWithCloud()}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-bold transition hover:bg-emerald-100 disabled:opacity-70 shadow-2xs cursor-pointer"
+              title="Synced with Supabase Cloud. Click to sync latest changes."
+            >
+              {isSyncing ? (
+                <RefreshCw className="w-3.5 h-3.5 text-emerald-600 animate-spin" />
+              ) : (
+                <Cloud className="w-3.5 h-3.5 text-emerald-600" />
+              )}
+              <span className="hidden md:inline">{isSyncing ? 'Syncing...' : 'Cloud Synced'}</span>
+              <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}`} />
+            </button>
+          ) : (
+            <span
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-[#6e44ff] text-[11px] font-semibold"
+              title="Running locally in demo/offline mode. Log in with email to sync across devices."
+            >
+              <span className="w-2 h-2 rounded-full bg-purple-400" />
+              <span className="hidden md:inline">Local Mode</span>
+            </span>
+          )}
+
           {/* Sustainability Quick Indicator */}
           {prediction && (
             <div className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-purple-100 text-xs shadow-sm">

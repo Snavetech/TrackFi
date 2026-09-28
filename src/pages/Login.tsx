@@ -8,7 +8,7 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgotPassword }) => {
-  const { login } = useAuth();
+  const { login, loginDemo } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -260,12 +260,28 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-2xl text-xs font-bold shadow-lg shadow-purple-500/25 transition active:scale-95 flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-2xl text-xs font-bold shadow-lg shadow-purple-500/25 transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>{loading ? 'Logging in...' : 'Login'}</span>
+              <span>{loading ? 'Logging in...' : 'Login & Sync Across Devices'}</span>
               <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
                 <ArrowRight className="w-3.5 h-3.5 text-white" />
               </div>
+            </button>
+
+            {/* Divider */}
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-purple-100"></div>
+              <span className="flex-shrink mx-3 text-[10px] font-bold text-[#8b849c] uppercase">or</span>
+              <div className="flex-grow border-t border-purple-100"></div>
+            </div>
+
+            {/* Offline Demo Button */}
+            <button
+              type="button"
+              onClick={loginDemo}
+              className="w-full py-2.5 bg-purple-50 hover:bg-purple-100 text-[#6e44ff] border border-purple-200/80 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>Explore Demo Account (Offline / Single Device)</span>
             </button>
           </form>
 

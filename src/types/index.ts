@@ -86,7 +86,7 @@ export interface FinancialPrediction {
 export interface NotificationItem {
   id: string;
   user_id: string;
-  type: 'budget_warning' | 'budget_exceeded' | 'low_balance' | 'high_risk' | 'system';
+  type: 'budget_warning' | 'budget_exceeded' | 'low_balance' | 'high_risk' | 'system' | 'warning' | 'info';
   title: string;
   body: string;
   is_read: boolean;

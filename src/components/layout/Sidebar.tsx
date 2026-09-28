@@ -28,12 +28,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onClo
   const { user, logout } = useAuth();
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
-  const navItems = [
+  const navItems: { id: string; label: string; icon: any; highlight?: boolean }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'budgets', label: 'Budgets', icon: Target },
     { id: 'savings', label: 'Savings Goals', icon: PiggyBank },
-    { id: 'predictions', label: 'Predictions', icon: TrendingUp },
+    { id: 'predictions', label: 'Predictions', icon: TrendingUp, highlight: true },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
     { id: 'categories', label: 'Categories', icon: Tag },

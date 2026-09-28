@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useFinancial } from '../context/FinancialContext';
 import { SUPPORTED_CURRENCIES } from '../types';
 import { isSupabaseConfigured } from '../lib/supabase';
-import { Save, Database, User, Check, Upload, Camera, Trash2, Sparkles } from 'lucide-react';
+import { Save, Database, User, Check, Upload, Camera, Trash2, Sparkles, Cloud, RefreshCw } from 'lucide-react';
 
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
@@ -15,12 +16,14 @@ const PRESET_AVATARS = [
 
 export const Settings: React.FC = () => {
   const { user, updateProfile } = useAuth();
+  const { isSyncing, lastSyncedAt, isCloudConnected, syncWithCloud, transactions } = useFinancial();
 
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || PRESET_AVATARS[0]);
   const [currency, setCurrency] = useState(user?.preferred_currency || 'NGN');
   const [lowBalanceThreshold, setLowBalanceThreshold] = useState(user?.low_balance_threshold?.toString() || '10000');
   const [savedMessage, setSavedMessage] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,15 +148,52 @@ export const Settings: React.FC = () => {
           <p className="text-[11px] text-[#8b849c] mt-1">Triggers an in-app notification when net balance drops below this threshold.</p>
         </div>
 
-        {/* System Backend Connection Status */}
-        <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-[#6e44ff]" />
-            <span className="font-semibold text-[#332a54]">Database & Storage Engine:</span>
+        {/* System Backend & Multi-Device Cloud Sync Status */}
+        <div className="p-5 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-3 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Cloud className="w-4 h-4 text-[#6e44ff]" />
+              <span className="font-bold text-[#332a54]">Multi-Device Cloud Sync:</span>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-[11px] font-bold border inline-flex items-center gap-1.5 self-start sm:self-auto ${isCloudConnected ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-purple-100 border-purple-200 text-[#6e44ff]'}`}>
+              <span className={`w-2 h-2 rounded-full ${isCloudConnected ? 'bg-emerald-500' : 'bg-purple-400'}`} />
+              {isCloudConnected ? 'Live Supabase Cloud Connected' : 'Local / Demo Mode (This Device Only)'}
+            </span>
           </div>
-          <span className={`px-3 py-1 rounded-full text-[11px] font-bold border ${isSupabaseConfigured ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-purple-100 border-purple-200 text-[#6e44ff]'}`}>
-            {isSupabaseConfigured ? 'Live Supabase Cloud Connected' : 'Local Storage Engine (Demo Active)'}
-          </span>
+
+          <p className="text-[11px] text-[#8b849c]">
+            {isCloudConnected 
+              ? `Your data is backed up to Supabase and automatically syncs across all your phones, tablets, and computers logged into this account.`
+              : 'You are currently in demo or offline mode. Your data is stored only inside this browser. Log out and sign up with your email to enable real-time cloud sync across all your devices.'}
+          </p>
+
+          {isCloudConnected && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-purple-100/60">
+              <span className="text-[11px] text-[#7a7293]">
+                {lastSyncedAt ? `Last synced: ${lastSyncedAt.toLocaleTimeString()}` : 'Sync ready'} • {transactions.length} transactions stored
+              </span>
+              <button
+                type="button"
+                disabled={isSyncing}
+                onClick={async () => {
+                  setSyncFeedback('Syncing with Supabase...');
+                  const res = await syncWithCloud();
+                  setSyncFeedback(res.message || (res.success ? 'Sync complete!' : 'Sync failed.'));
+                  setTimeout(() => setSyncFeedback(null), 4000);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-60 self-start sm:self-auto"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                <span>{isSyncing ? 'Syncing...' : 'Sync to Cloud Now'}</span>
+              </button>
+            </div>
+          )}
+
+          {syncFeedback && (
+            <div className="p-2.5 rounded-xl bg-purple-100/60 border border-purple-200 text-[#6e44ff] font-semibold text-[11px]">
+              {syncFeedback}
+            </div>
+          )}
         </div>
 
         {/* Re-launch Onboarding Tutorial */}
@@ -178,21 +218,21 @@ export const Settings: React.FC = () => {
         {/* Clear Demo Data Management */}
         <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="space-y-0.5">
-            <p className="font-bold text-rose-950">Clear Ledger & Demo Data</p>
-            <p className="text-[11px] text-rose-700">Wipe all initial sample transactions so you can work exclusively with your own CSV / Excel uploads.</p>
+            <p className="font-bold text-rose-950">Clear Ledger & Local Data</p>
+            <p className="text-[11px] text-rose-700">Wipe all transactions so you can work exclusively with your own CSV / Excel uploads.</p>
           </div>
           <button
             type="button"
             onClick={() => {
-              if (window.confirm('Wipe all demo transactions and start with a clean slate?')) {
-                localStorage.setItem('intellibudget_transactions', JSON.stringify([]));
+              if (window.confirm('Wipe all transactions and start with a clean slate?')) {
+                localStorage.setItem(`intellibudget_transactions_${user?.id || 'usr_demo_01'}`, JSON.stringify([]));
                 window.location.reload();
               }
             }}
             className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-bold transition shadow-sm shrink-0"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear Demo Ledger</span>
+            <span>Clear Ledger</span>
           </button>
         </div>
 

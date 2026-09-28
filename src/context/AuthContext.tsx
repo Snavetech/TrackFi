@@ -43,6 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
+        await supabase.from('profiles').upsert(newProf);
         setUser(newProf);
       }
     } catch {
@@ -103,8 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check if demo credentials
-    if (cleanEmail === 'demo@trackfi.app' || cleanEmail === 'ismail@example.com' || cleanEmail.includes('demo')) {
+    // Check if explicit demo credentials when offline or demo account requested
+    if ((cleanEmail === 'demo@trackfi.app' && pass === 'demo1234') || (!isSupabaseConfigured && cleanEmail.includes('demo'))) {
       setUser({
         ...INITIAL_PROFILE,
         full_name: 'Ismail Alabi',
@@ -148,17 +149,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       if (isSupabaseConfigured && supabase) {
+        const redirectUrl = typeof window !== 'undefined' ? window.location.origin : 'https://trackfi-sigma.vercel.app/';
         const { data, error } = await supabase.auth.signUp({
           email,
           password: pass,
           options: {
             data: { full_name: fullName, preferred_currency: currency },
-            emailRedirectTo: 'https://trackfi-sigma.vercel.app/'
+            emailRedirectTo: redirectUrl
           }
         });
         if (error) throw error;
+        if (data.session && data.user) {
+          await fetchProfile(data.user.id, data.user.email);
+          return { success: true, requiresEmailConfirmation: false };
+        }
       }
-      // Do NOT auto-login. Require user to confirm email and log in via Login screen
       return { success: true, requiresEmailConfirmation: true };
     } catch (err: any) {
       return { success: false, error: err.message || 'Sign up failed' };

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Transaction,
   Category,
@@ -20,6 +20,23 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { format } from 'date-fns';
 import { isCorruptedTransaction } from '../lib/importUtils';
 
+export const isValidUUID = (id?: string | null): boolean => {
+  if (!id || typeof id !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+};
+
+export const resolveCategoryUUID = (catRef: string | null | undefined, currentCategories: Category[]): string | null => {
+  if (!catRef) return null;
+  if (isValidUUID(catRef)) return catRef;
+  const match = currentCategories.find(
+    c => c.id === catRef || c.name.toLowerCase().trim() === catRef.toLowerCase().trim()
+  );
+  if (match && isValidUUID(match.id)) {
+    return match.id;
+  }
+  return null;
+};
+
 interface FinancialContextType {
   transactions: Transaction[];
   categories: Category[];
@@ -33,8 +50,12 @@ interface FinancialContextType {
   totalExpense: number;
   currentBalance: number;
   activeHorizon: number;
+  isSyncing: boolean;
+  lastSyncedAt: Date | null;
+  isCloudConnected: boolean;
   
   // Actions
+  syncWithCloud: () => Promise<{ success: boolean; count?: number; message?: string }>;
   addTransaction: (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => boolean;
   addTransactionsBulk: (txs: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>[], shouldReplace?: boolean) => void;
   updateTransaction: (id: string, tx: Partial<Transaction>) => void;
@@ -60,10 +81,18 @@ interface FinancialContextType {
 
 const FinancialContext = createContext<FinancialContextType | undefined>(undefined);
 
+// Helper: check if the current user is a real Supabase-authenticated user (not demo)
+export const isCloudUser = (userId: string): boolean => {
+  return isSupabaseConfigured && !!supabase && !userId.startsWith('usr_') && userId !== 'usr_demo_01';
+};
+
 export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, currencySymbol } = useAuth();
   const userId = user?.id || 'usr_demo_01';
-  const isDemoUser = userId === 'usr_demo_01' || user?.full_name?.toLowerCase().includes('ismail') || user?.id?.includes('demo');
+  const isDemoUser = !user || userId === 'usr_demo_01' || userId.startsWith('usr_demo');
+
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   // State with per-user LocalStorage persistence & cloud sync
   const [categories, setCategories] = useState<Category[]>(() => {
@@ -126,38 +155,212 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [activeHorizon, setActiveHorizon] = useState<number>(30);
   const [predictionHistory, setPredictionHistory] = useState<FinancialPrediction[]>([]);
 
-  // Reload user data when user changes
-  useEffect(() => {
-    const savedTx = localStorage.getItem(`intellibudget_transactions_${userId}`);
-    if (savedTx) {
-      try { setTransactions(JSON.parse(savedTx)); } catch {}
-    } else {
-      setTransactions(isDemoUser ? INITIAL_TRANSACTIONS : []);
-    }
+  // ===========================================
+  // SUPABASE CLOUD SYNC: Fetch data on user change
+  // ===========================================
+  const fetchFromSupabase = useCallback(async () => {
+    if (!isCloudUser(userId) || !supabase) return;
+    setIsSyncing(true);
 
-    const savedBdg = localStorage.getItem(`intellibudget_budgets_${userId}`);
-    if (savedBdg) {
-      try { setBudgets(JSON.parse(savedBdg)); } catch {}
-    } else {
-      setBudgets(isDemoUser ? INITIAL_BUDGETS : []);
-    }
+    try {
+      // 1. Fetch categories first to ensure they exist and have valid UUIDs
+      let { data: catData, error: catError } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', userId);
 
-    const savedSvg = localStorage.getItem(`intellibudget_savings_goals_${userId}`);
-    if (savedSvg) {
-      try { setSavingsGoals(JSON.parse(savedSvg)); } catch {}
-    } else {
-      setSavingsGoals(isDemoUser ? INITIAL_SAVINGS_GOALS : []);
-    }
+      // If user has no categories in Supabase, auto-seed standard categories with UUIDs
+      if (!catError && (!catData || catData.length === 0)) {
+        const seedPayload = INITIAL_CATEGORIES.map(c => ({
+          user_id: userId,
+          name: c.name,
+          type: c.type,
+          icon: c.icon || 'Tag',
+          color: c.color || '#6e44ff',
+        }));
+        const { data: seeded } = await supabase
+          .from('categories')
+          .insert(seedPayload)
+          .select();
+        if (seeded && seeded.length > 0) {
+          catData = seeded;
+        }
+      }
 
-    const savedNtf = localStorage.getItem(`intellibudget_notifications_${userId}`);
-    if (savedNtf) {
-      try { setNotifications(JSON.parse(savedNtf)); } catch {}
-    } else {
-      setNotifications(isDemoUser ? INITIAL_NOTIFICATIONS : []);
+      const activeCategories: Category[] = catData && catData.length > 0 ? catData : INITIAL_CATEGORIES;
+      if (catData && catData.length > 0) {
+        setCategories(catData);
+        localStorage.setItem(`intellibudget_categories_${userId}`, JSON.stringify(catData));
+      }
+
+      // 2. Fetch all user data in parallel
+      const [txRes, bdgRes, svgRes, ntfRes] = await Promise.all([
+        supabase.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
+        supabase.from('budgets').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('savings_goals').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+        supabase.from('notifications').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+      ]);
+
+      // 3. Transactions handling & automatic local migration
+      if (txRes.data && txRes.data.length > 0) {
+        setTransactions(txRes.data);
+        localStorage.setItem(`intellibudget_transactions_${userId}`, JSON.stringify(txRes.data));
+      } else if (!txRes.error) {
+        // Supabase returned 0 transactions for this user.
+        // Check if there are local transactions on this device to migrate (e.g. from an import on this device)
+        const localSaved = localStorage.getItem(`intellibudget_transactions_${userId}`) ||
+                           localStorage.getItem('intellibudget_transactions_usr_demo_01');
+        let localTxs: Transaction[] = [];
+        if (localSaved) {
+          try {
+            const parsed = JSON.parse(localSaved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              localTxs = parsed.filter(t => t && typeof t.amount === 'number' && t.amount > 0);
+            }
+          } catch {}
+        }
+
+        if (localTxs.length > 0) {
+          console.log(`[TrackFi] Migrating ${localTxs.length} local transactions to Supabase for user ${userId}...`);
+          const rowsToInsert = localTxs.map(tx => ({
+            user_id: userId,
+            type: tx.type,
+            amount: tx.amount,
+            category_id: resolveCategoryUUID(tx.category_id, activeCategories),
+            date: tx.date,
+            description: tx.description || null,
+            payment_method: tx.payment_method || null,
+            is_recurring: tx.is_recurring || false,
+            recurrence_interval: tx.recurrence_interval || null,
+          }));
+
+          const { data: uploaded, error: uploadErr } = await supabase
+            .from('transactions')
+            .insert(rowsToInsert)
+            .select();
+
+          if (uploaded && uploaded.length > 0) {
+            setTransactions(uploaded);
+            localStorage.setItem(`intellibudget_transactions_${userId}`, JSON.stringify(uploaded));
+          } else {
+            if (uploadErr) console.error('[TrackFi] Migration insert error:', uploadErr);
+            setTransactions(localTxs);
+          }
+        } else {
+          setTransactions([]);
+          localStorage.setItem(`intellibudget_transactions_${userId}`, JSON.stringify([]));
+        }
+      }
+
+      if (bdgRes.data && bdgRes.data.length > 0) {
+        setBudgets(bdgRes.data);
+      } else if (!bdgRes.error) {
+        setBudgets([]);
+      }
+
+      if (svgRes.data && svgRes.data.length > 0) {
+        setSavingsGoals(svgRes.data);
+      } else if (!svgRes.error) {
+        setSavingsGoals([]);
+      }
+
+      if (ntfRes.data && ntfRes.data.length > 0) {
+        setNotifications(ntfRes.data);
+      } else if (!ntfRes.error) {
+        setNotifications([]);
+      }
+
+      setLastSyncedAt(new Date());
+    } catch (err) {
+      console.error('[TrackFi] Supabase fetch failed, using localStorage cache:', err);
+    } finally {
+      setIsSyncing(false);
     }
   }, [userId]);
 
-  // Sync to LocalStorage per user ID
+  // Reload user data when user changes — Supabase first, then localStorage fallback
+  useEffect(() => {
+    if (isCloudUser(userId)) {
+      fetchFromSupabase();
+    } else {
+      // For demo/local users, load from localStorage
+      const savedTx = localStorage.getItem(`intellibudget_transactions_${userId}`);
+      if (savedTx) {
+        try { setTransactions(JSON.parse(savedTx)); } catch {}
+      } else {
+        setTransactions(isDemoUser ? INITIAL_TRANSACTIONS : []);
+      }
+
+      const savedBdg = localStorage.getItem(`intellibudget_budgets_${userId}`);
+      if (savedBdg) {
+        try { setBudgets(JSON.parse(savedBdg)); } catch {}
+      } else {
+        setBudgets(isDemoUser ? INITIAL_BUDGETS : []);
+      }
+
+      const savedSvg = localStorage.getItem(`intellibudget_savings_goals_${userId}`);
+      if (savedSvg) {
+        try { setSavingsGoals(JSON.parse(savedSvg)); } catch {}
+      } else {
+        setSavingsGoals(isDemoUser ? INITIAL_SAVINGS_GOALS : []);
+      }
+
+      const savedNtf = localStorage.getItem(`intellibudget_notifications_${userId}`);
+      if (savedNtf) {
+        try { setNotifications(JSON.parse(savedNtf)); } catch {}
+      } else {
+        setNotifications(isDemoUser ? INITIAL_NOTIFICATIONS : []);
+      }
+
+      const savedCat = localStorage.getItem(`intellibudget_categories_${userId}`);
+      if (savedCat) {
+        try { setCategories(JSON.parse(savedCat)); } catch {}
+      } else {
+        setCategories(isDemoUser ? INITIAL_CATEGORIES : []);
+      }
+    }
+  }, [userId, fetchFromSupabase, isDemoUser]);
+
+  // Realtime multi-device sync & Window Focus listener
+  useEffect(() => {
+    if (!isCloudUser(userId) || !supabase) return;
+
+    const handleFocus = () => {
+      fetchFromSupabase();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchFromSupabase();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    const channel = supabase
+      .channel(`sync_${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${userId}` }, () => {
+        fetchFromSupabase();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'budgets', filter: `user_id=eq.${userId}` }, () => {
+        fetchFromSupabase();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'savings_goals', filter: `user_id=eq.${userId}` }, () => {
+        fetchFromSupabase();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `user_id=eq.${userId}` }, () => {
+        fetchFromSupabase();
+      })
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (supabase) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [userId, fetchFromSupabase]);
+
+  // Sync to LocalStorage per user ID (acts as cache for fast loads)
   useEffect(() => {
     localStorage.setItem(`intellibudget_categories_${userId}`, JSON.stringify(categories));
   }, [categories, userId]);
@@ -235,7 +438,13 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Budget usage check (90% / 100%)
     budgets.forEach(b => {
       const spent = transactions
-        .filter(t => t.type === 'expense' && (!b.category_id || t.category_id === b.category_id))
+        .filter(t => {
+          if (t.type !== 'expense') return false;
+          if (b.category_id && t.category_id !== b.category_id) return false;
+          // Only count transactions within this budget's date range
+          if (t.date < b.start_date || t.date > b.end_date) return false;
+          return true;
+        })
         .reduce((sum, t) => sum + t.amount, 0);
 
       const usageRatio = spent / b.amount;
@@ -270,99 +479,283 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (newAlerts.length > 0) {
       setNotifications(prev => [...newAlerts, ...prev]);
+      // Sync new notifications to Supabase
+      if (isCloudUser(userId) && supabase) {
+        supabase.from('notifications').insert(
+          newAlerts.map(n => ({ ...n }))
+        ).then(() => {});
+      }
     }
   }, [currentBalance, budgets, transactions, user, currencySymbol]);
 
-  // Actions
+  // ===========================================
+  // ACTIONS — with Supabase sync & UUID validation
+  // ===========================================
+
   const addTransaction = (tx: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>): boolean => {
     if (tx.type === 'expense' && tx.amount > currentBalance) {
       return false;
     }
+    const now = new Date().toISOString();
     const newTx: Transaction = {
       ...tx,
       id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       user_id: userId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     };
     setTransactions(prev => [newTx, ...prev]);
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      setIsSyncing(true);
+      const safeCatId = resolveCategoryUUID(tx.category_id, categories);
+      supabase.from('transactions').insert({
+        user_id: userId,
+        type: tx.type,
+        amount: tx.amount,
+        category_id: safeCatId,
+        date: tx.date,
+        description: tx.description || null,
+        payment_method: tx.payment_method || null,
+        is_recurring: tx.is_recurring || false,
+        recurrence_interval: tx.recurrence_interval || null,
+      }).select().single().then(({ data, error }) => {
+        setIsSyncing(false);
+        if (error) {
+          console.error('[TrackFi] Error inserting transaction to Supabase:', error);
+        } else if (data) {
+          setTransactions(prev => prev.map(t => t.id === newTx.id ? { ...t, id: data.id } : t));
+          setLastSyncedAt(new Date());
+        }
+      });
+    }
+
     return true;
   };
 
   const addTransactionsBulk = (txs: Omit<Transaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>[], shouldReplace: boolean = false) => {
+    const now = new Date().toISOString();
     const newItems: Transaction[] = txs.map((tx, idx) => ({
       ...tx,
       id: `tx_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 4)}`,
       user_id: userId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     }));
     if (shouldReplace) {
       setTransactions(newItems);
     } else {
       setTransactions(prev => [...newItems, ...prev]);
     }
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      setIsSyncing(true);
+      const cleanRows = txs.map(tx => ({
+        user_id: userId,
+        type: tx.type,
+        amount: tx.amount,
+        category_id: resolveCategoryUUID(tx.category_id, categories),
+        date: tx.date,
+        description: tx.description || null,
+        payment_method: tx.payment_method || null,
+        is_recurring: tx.is_recurring || false,
+        recurrence_interval: tx.recurrence_interval || null,
+      }));
+
+      const executeSync = async () => {
+        if (!supabase) return;
+        try {
+          if (shouldReplace) {
+            await supabase.from('transactions').delete().eq('user_id', userId);
+          }
+          const { data, error } = await supabase.from('transactions').insert(cleanRows).select();
+          if (error) {
+            console.error('[TrackFi] Bulk transactions insert error:', error);
+          } else if (data) {
+            setTransactions(prev => {
+              if (shouldReplace) return data;
+              const localIds = new Set(newItems.map(i => i.id));
+              const withoutLocal = prev.filter(t => !localIds.has(t.id));
+              return [...data, ...withoutLocal];
+            });
+            setLastSyncedAt(new Date());
+          }
+        } catch (err) {
+          console.error('[TrackFi] Bulk sync exception:', err);
+        } finally {
+          setIsSyncing(false);
+        }
+      };
+      executeSync();
+    }
   };
 
   const updateTransaction = (id: string, updates: Partial<Transaction>) => {
-    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updates, updated_at: new Date().toISOString() } : t));
+    const now = new Date().toISOString();
+    setTransactions(prev => prev.map(t => t.id === id ? { ...t, ...updates, updated_at: now } : t));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      const { id: _id, user_id: _uid, created_at: _ca, ...safeUpdates } = updates as any;
+      if (safeUpdates.category_id !== undefined) {
+        safeUpdates.category_id = resolveCategoryUUID(safeUpdates.category_id, categories);
+      }
+      supabase.from('transactions').update({ ...safeUpdates, updated_at: now }).eq('id', id).eq('user_id', userId).then(() => {});
+    }
   };
 
   const deleteTransaction = (id: string) => {
     setTransactions(prev => prev.filter(t => t.id !== id));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('transactions').delete().eq('id', id).eq('user_id', userId).then(() => {});
+    }
   };
 
   const clearCorruptedTransactions = () => {
-    setTransactions(prev => prev.filter(t => !isCorruptedTransaction(t)));
+    setTransactions(prev => {
+      const corrupted = prev.filter(t => isCorruptedTransaction(t));
+      const clean = prev.filter(t => !isCorruptedTransaction(t));
+
+      // Delete corrupted from Supabase
+      if (isCloudUser(userId) && supabase && corrupted.length > 0) {
+        const corruptedIds = corrupted.map(t => t.id);
+        supabase.from('transactions').delete().in('id', corruptedIds).eq('user_id', userId).then(() => {});
+      }
+
+      return clean;
+    });
   };
 
   const clearAllTransactions = () => {
     setTransactions([]);
-    localStorage.setItem('intellibudget_transactions', JSON.stringify([]));
+    localStorage.setItem(`intellibudget_transactions_${userId}`, JSON.stringify([]));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('transactions').delete().eq('user_id', userId).then(() => {});
+    }
   };
 
   const addCategory = (cat: Omit<Category, 'id' | 'user_id' | 'created_at'>) => {
+    const now = new Date().toISOString();
     const newCat: Category = {
       ...cat,
       id: `cat_${Date.now()}`,
       user_id: userId,
-      created_at: new Date().toISOString(),
+      created_at: now,
     };
     setCategories(prev => [...prev, newCat]);
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('categories').insert({
+        user_id: userId,
+        name: cat.name,
+        type: cat.type,
+        icon: cat.icon || null,
+        color: cat.color || null,
+      }).select().single().then(({ data }) => {
+        if (data) {
+          setCategories(prev => prev.map(c => c.id === newCat.id ? { ...c, id: data.id } : c));
+        }
+      });
+    }
   };
 
   const deleteCategory = (id: string) => {
     setCategories(prev => prev.filter(c => c.id !== id));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('categories').delete().eq('id', id).eq('user_id', userId).then(() => {});
+    }
   };
 
   const addBudget = (b: Omit<Budget, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    const now = new Date().toISOString();
     const newB: Budget = {
       ...b,
       id: `bdg_${Date.now()}`,
       user_id: userId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     };
     setBudgets(prev => [newB, ...prev]);
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('budgets').insert({
+        user_id: userId,
+        title: b.title,
+        amount: b.amount,
+        period_type: b.period_type,
+        start_date: b.start_date,
+        end_date: b.end_date,
+        category_id: resolveCategoryUUID(b.category_id, categories),
+        notes: b.notes || null,
+      }).select().single().then(({ data, error }) => {
+        if (error) {
+          console.error('[TrackFi] Error inserting budget to Supabase:', error);
+        } else if (data) {
+          setBudgets(prev => prev.map(bg => bg.id === newB.id ? { ...bg, id: data.id } : bg));
+        }
+      });
+    }
   };
 
   const updateBudget = (id: string, updates: Partial<Budget>) => {
-    setBudgets(prev => prev.map(b => b.id === id ? { ...b, ...updates, updated_at: new Date().toISOString() } : b));
+    const now = new Date().toISOString();
+    setBudgets(prev => prev.map(b => b.id === id ? { ...b, ...updates, updated_at: now } : b));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      const { id: _id, user_id: _uid, created_at: _ca, ...safeUpdates } = updates as any;
+      if (safeUpdates.category_id !== undefined) {
+        safeUpdates.category_id = resolveCategoryUUID(safeUpdates.category_id, categories);
+      }
+      supabase.from('budgets').update({ ...safeUpdates, updated_at: now }).eq('id', id).eq('user_id', userId).then(() => {});
+    }
   };
 
   const deleteBudget = (id: string) => {
     setBudgets(prev => prev.filter(b => b.id !== id));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('budgets').delete().eq('id', id).eq('user_id', userId).then(() => {});
+    }
   };
 
   const addSavingsGoal = (g: Omit<SavingsGoal, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
+    const now = new Date().toISOString();
     const newG: SavingsGoal = {
       ...g,
       id: `svg_${Date.now()}`,
       user_id: userId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: now,
+      updated_at: now,
     };
     setSavingsGoals(prev => [newG, ...prev]);
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('savings_goals').insert({
+        user_id: userId,
+        name: g.name,
+        target_amount: g.target_amount,
+        current_amount: g.current_amount || 0,
+        deadline: g.deadline || null,
+        notes: g.notes || null,
+      }).select().single().then(({ data }) => {
+        if (data) {
+          setSavingsGoals(prev => prev.map(sg => sg.id === newG.id ? { ...sg, id: data.id } : sg));
+        }
+      });
+    }
 
     // Automatically record an expense transaction if initial deposit > 0
     if (g.current_amount > 0) {
@@ -382,12 +775,21 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const depositSavingsGoal = (id: string, amount: number) => {
     const targetGoal = savingsGoals.find(g => g.id === id);
     const goalName = targetGoal?.name || 'Savings Vault';
+    const now = new Date().toISOString();
 
     setSavingsGoals(prev => prev.map(g => g.id === id ? {
       ...g,
       current_amount: g.current_amount + amount,
-      updated_at: new Date().toISOString()
+      updated_at: now
     } : g));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase && targetGoal) {
+      supabase.from('savings_goals').update({
+        current_amount: targetGoal.current_amount + amount,
+        updated_at: now,
+      }).eq('id', id).eq('user_id', userId).then(() => {});
+    }
 
     // Automatically record an expense transaction so total available balance is deducted
     addTransaction({
@@ -404,6 +806,11 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteSavingsGoal = (id: string) => {
     setSavingsGoals(prev => prev.filter(g => g.id !== id));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('savings_goals').delete().eq('id', id).eq('user_id', userId).then(() => {});
+    }
   };
 
   const recalculatePrediction = (horizonDays: number = 30, budgetId: string | null = null) => {
@@ -412,10 +819,32 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const markNotificationAsRead = (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('notifications').update({ is_read: true }).eq('id', id).eq('user_id', userId).then(() => {});
+    }
   };
 
   const markAllNotificationsAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+
+    // Sync to Supabase
+    if (isCloudUser(userId) && supabase) {
+      supabase.from('notifications').update({ is_read: true }).eq('user_id', userId).eq('is_read', false).then(() => {});
+    }
+  };
+
+  const syncWithCloud = async (): Promise<{ success: boolean; count?: number; message?: string }> => {
+    if (!isCloudUser(userId) || !supabase) {
+      return { success: false, message: 'Cloud sync requires an authenticated Supabase account.' };
+    }
+    try {
+      await fetchFromSupabase();
+      return { success: true, count: transactions.length, message: 'Successfully synced all data with cloud.' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Sync failed.' };
+    }
   };
 
   const unreadNotificationCount = notifications.filter(n => !n.is_read).length;
@@ -435,6 +864,10 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         totalExpense,
         currentBalance,
         activeHorizon,
+        isSyncing,
+        lastSyncedAt,
+        isCloudConnected: isCloudUser(userId),
+        syncWithCloud,
         addTransaction,
         addTransactionsBulk,
         updateTransaction,

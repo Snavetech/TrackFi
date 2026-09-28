@@ -98,6 +98,7 @@ export const SavingsGoalModal: React.FC<SavingsGoalModalProps> = ({ isOpen, onCl
             <input
               type="date"
               value={deadline}
+              min={format(new Date(), 'yyyy-MM-dd')}
               onClick={(e) => (e.target as any).showPicker?.()}
               onChange={(e) => setDeadline(e.target.value)}
               className="w-full px-4 py-2.5 bg-slate-50 border border-purple-100 rounded-2xl text-[#332a54] text-xs font-bold focus:outline-none focus:border-[#6e44ff] cursor-pointer"

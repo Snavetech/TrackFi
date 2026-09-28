@@ -57,6 +57,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       return;
     }
 
+
     const validCats = categories.filter(c => c.type === type);
     const selectedCatId = categoryId && validCats.some(c => c.id === categoryId)
       ? categoryId
@@ -147,7 +148,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
               <span className="absolute left-4 top-3 text-[#6e44ff] font-mono text-lg font-bold">{currencySymbol}</span>
               <input
                 type="number"
-                step="100"
+                step="0.01"
                 min="0"
                 required
                 placeholder="0.00"
