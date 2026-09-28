@@ -262,7 +262,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
               disabled={loading}
               className="w-full py-3.5 bg-[#6e44ff] hover:bg-[#5b32e0] text-white rounded-2xl text-xs font-bold shadow-lg shadow-purple-500/25 transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>{loading ? 'Logging in...' : 'Login & Sync Across Devices'}</span>
+              <span>{loading ? 'Logging in...' : 'Login'}</span>
               <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
                 <ArrowRight className="w-3.5 h-3.5 text-white" />
               </div>
@@ -281,7 +281,7 @@ export const Login: React.FC<LoginProps> = ({ onNavigateSignUp, onNavigateForgot
               onClick={loginDemo}
               className="w-full py-2.5 bg-purple-50 hover:bg-purple-100 text-[#6e44ff] border border-purple-200/80 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>Explore Demo Account (Offline / Single Device)</span>
+              <span>Explore Demo Account</span>
             </button>
           </form>
 

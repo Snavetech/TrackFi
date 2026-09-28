@@ -28,12 +28,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onClo
   const { user, logout } = useAuth();
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
-  const navItems: { id: string; label: string; icon: any; highlight?: boolean }[] = [
+  const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'budgets', label: 'Budgets', icon: Target },
     { id: 'savings', label: 'Savings Goals', icon: PiggyBank },
-    { id: 'predictions', label: 'Predictions', icon: TrendingUp, highlight: true },
+    { id: 'predictions', label: 'Predictions', icon: TrendingUp },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'reports', label: 'Reports', icon: FileSpreadsheet },
     { id: 'categories', label: 'Categories', icon: Tag },
@@ -111,11 +111,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onTabChange, onClo
                   <Icon className={`w-4 h-4 ${isActive ? 'text-[#6e44ff]' : 'text-[#8b849c]'}`} />
                   <span>{item.label}</span>
                 </div>
-                {item.highlight && (
-                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-purple-100 text-[#6e44ff]">
-                    AI
-                  </span>
-                )}
               </button>
             );
           })}

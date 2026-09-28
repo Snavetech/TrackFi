@@ -63,7 +63,7 @@ interface FinancialContextType {
   clearCorruptedTransactions: () => void;
   clearAllTransactions: () => void;
   
-  addCategory: (cat: Omit<Category, 'id' | 'user_id' | 'created_at'>) => void;
+  addCategory: (cat: Omit<Category, 'id' | 'user_id' | 'created_at'>) => Promise<Category>;
   deleteCategory: (id: string) => void;
   
   addBudget: (b: Omit<Budget, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => void;
@@ -640,30 +640,41 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  const addCategory = (cat: Omit<Category, 'id' | 'user_id' | 'created_at'>) => {
+  const addCategory = async (cat: Omit<Category, 'id' | 'user_id' | 'created_at'>): Promise<Category> => {
     const now = new Date().toISOString();
-    const newCat: Category = {
+    let newCat: Category = {
       ...cat,
       id: `cat_${Date.now()}`,
       user_id: userId,
       created_at: now,
     };
-    setCategories(prev => [...prev, newCat]);
 
     // Sync to Supabase
     if (isCloudUser(userId) && supabase) {
-      supabase.from('categories').insert({
-        user_id: userId,
-        name: cat.name,
-        type: cat.type,
-        icon: cat.icon || null,
-        color: cat.color || null,
-      }).select().single().then(({ data }) => {
+      try {
+        const { data, error } = await supabase.from('categories').insert({
+          user_id: userId,
+          name: cat.name,
+          type: cat.type,
+          icon: cat.icon || 'Tag',
+          color: cat.color || '#6e44ff',
+        }).select().single();
         if (data) {
-          setCategories(prev => prev.map(c => c.id === newCat.id ? { ...c, id: data.id } : c));
+          newCat = data;
+        } else if (error) {
+          console.error('[TrackFi] Error inserting category to Supabase:', error);
         }
-      });
+      } catch (err) {
+        console.error('[TrackFi] Category insert exception:', err);
+      }
     }
+
+    setCategories(prev => {
+      const filtered = prev.filter(c => c.id !== newCat.id && c.name.toLowerCase().trim() !== newCat.name.toLowerCase().trim());
+      return [...filtered, newCat];
+    });
+
+    return newCat;
   };
 
   const deleteCategory = (id: string) => {
